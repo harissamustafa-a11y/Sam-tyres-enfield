@@ -59,5 +59,46 @@
     else { video.play().catch(() => {}); start(); }
   });
 
+  // Reviews: deal the static list into 1-3 columns that scroll upward in a seamless loop.
+  // Each column holds its cards twice and moves by -50%, at a steady pixel speed.
+  // Without JS, or with reduced motion, the reviews stay a static grid.
+  const tcols = document.getElementById('tcols');
+  const cards = [...tcols.querySelectorAll('.tcard')];
+  const list = tcols.querySelector('.tlist');
+  const colsFor = () => (window.innerWidth >= 1080 ? 3 : window.innerWidth >= 768 ? 2 : 1);
+  let built = 0;
+  const buildReviews = () => {
+    const n = reduce.matches ? 0 : colsFor();
+    if (n === built) return;
+    built = n;
+    tcols.replaceChildren();
+    tcols.classList.toggle('is-marquee', n > 0);
+    if (!n) { cards.forEach((c) => list.append(c)); tcols.append(list); return; }
+    for (let c = 0; c < n; c++) {
+      const col = document.createElement('div'); col.className = 'tcol';
+      const track = document.createElement('div'); track.className = 'tcol__track';
+      const set = document.createElement('div'); set.className = 'tcol__set';
+      cards.filter((_, i) => i % n === c).forEach((card) => set.append(card));
+      track.append(set); col.append(track); tcols.append(col);
+      requestAnimationFrame(() => {
+        // A short column is topped up with repeat cards until it fills the window,
+        // otherwise a gap would show as it loops. Repeats are hidden from assistive tech.
+        const mine = [...set.children];
+        for (let k = 0; set.offsetHeight < tcols.clientHeight + 24 && k < 20; k++) {
+          const extra = mine[k % mine.length].cloneNode(true);
+          extra.setAttribute('aria-hidden', 'true'); extra.inert = true;
+          set.append(extra);
+        }
+        const copy = set.cloneNode(true); copy.setAttribute('aria-hidden', 'true'); copy.inert = true;
+        track.append(copy);
+        // ~28px/s, nudged per column so they drift out of step.
+        track.style.setProperty('--dur', `${(set.offsetHeight / (28 - c * 3)).toFixed(1)}s`);
+      });
+    }
+  };
+  buildReviews();
+  window.addEventListener('resize', buildReviews, { passive: true });
+  reduce.addEventListener('change', buildReviews);
+
   document.getElementById('yr').textContent = new Date().getFullYear();
 })();
