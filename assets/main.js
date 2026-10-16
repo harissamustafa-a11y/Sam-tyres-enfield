@@ -3,23 +3,16 @@
   document.body.classList.remove('no-js');
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   const video = document.getElementById('hero-video');
-  const toggle = document.getElementById('vid-toggle');
   const nav = document.getElementById('nav');
 
-  // Hero video: honour reduced motion by holding the poster frame; always offer pause/play.
-  const setPaused = (paused) => {
-    toggle.setAttribute('aria-pressed', String(paused));
-    toggle.setAttribute('aria-label', paused ? 'Play background video' : 'Pause background video');
-    if (paused) video.pause(); else video.play().catch(() => setPaused(true));
-  };
-  toggle.addEventListener('click', () => setPaused(!video.paused));
-  if (reduce.matches) setPaused(true);
+  // Hero video loops muted. Reduced motion holds the poster frame instead.
+  if (reduce.matches) video.pause();
 
   // Pause the video whenever the hero is off screen to save battery and CPU.
   const hero = document.querySelector('.hero');
   new IntersectionObserver(([e]) => {
     nav.classList.toggle('is-solid', !e.isIntersecting || e.intersectionRatio < 0.9);
-    if (toggle.getAttribute('aria-pressed') === 'true') return;
+    if (reduce.matches) return;
     if (e.isIntersecting) video.play().catch(() => {}); else video.pause();
   }, { threshold: [0, 0.9] }).observe(hero);
 
@@ -62,8 +55,8 @@
   });
   hosts.forEach((h) => pio.observe(h));
   reduce.addEventListener('change', () => {
-    if (reduce.matches) { layers.forEach((l) => (l.el.style.transform = '')); setPaused(true); }
-    else start();
+    if (reduce.matches) { layers.forEach((l) => (l.el.style.transform = '')); video.pause(); }
+    else { video.play().catch(() => {}); start(); }
   });
 
   document.getElementById('yr').textContent = new Date().getFullYear();
